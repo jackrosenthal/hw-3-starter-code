@@ -136,7 +136,7 @@
 ;;    ==>   #t
 ;; Example: (contains-free-var? 'a 'a)
 ;;    ==>   #t
-;; Example: (contains-free-var? 'b '(abstraction a (abstraction a b)))
+;; Example: (contains-free-var? 'b '(abstraction a (abstraction b b)))
 ;;    ==>   #f
 ;; Example: (contains-free-var? 'c '(abstraction a (abstraction a b)))
 ;;    ==>   #f
