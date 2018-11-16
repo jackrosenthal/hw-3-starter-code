@@ -188,7 +188,7 @@
 ;;          α ==> y for a in λy.x
 ;;    ==>   '(abstraction a y)
 ;; Example: (substitute-var 'x '(abstraction y (application y x)) 'y)
-;;          α ==> y for a in λy.ax
+;;          α ==> y for a in λy.yx
 ;;    ==>   '(abstraction a (application a y))
 ;;
 ;; More examples, for your enjoyment:
