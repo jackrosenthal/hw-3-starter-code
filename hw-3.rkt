@@ -215,8 +215,8 @@
 ;;
 ;; Example: (single-reduction '(application (abstraction x x) (abstraction y y)))
 ;;    ==>   '(abstraction y y)
-;; Example: (single-reduction '(application (abstraction x (abstracion z (application x z))) (abstraction y y)))
-;;    ==>   '(abstracion z (application x z))
+;; Example: (single-reduction '(application (abstraction x (abstraction z (application x z))) (abstraction y y)))
+;;    ==>   '(abstraction z (application (abstraction y y) z))
 ;; Example: (single-reduction 'x)
 ;;    ==>   #f
 ;; Example: (single-reduction '(application (application a a) (application (abstraction x x) a)))
