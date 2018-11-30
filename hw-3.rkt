@@ -106,7 +106,7 @@
 ;; to used this when you need to alpha-rename a variable to find a new
 ;; variable name.
 ;;
-;; Example: (new-variable '(a (abstraction a b) (abstration c c)))
+;; Example: (new-variable '(a (abstraction a b) (abstraction c c)))
 ;;    ==>   'c
 ;;
 ;; Note: this function depends on your contains-free-var? implementation in
