@@ -1,17 +1,37 @@
 #lang racket
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; READ ALL COMMENTS BEFORE IMPLEMENTING ANYTHING! ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; 'todo' syntax implementation. You do not need to modify, although
 ;; you can remove once everything has been implemented, if you wish.
-(define-struct (exn:fail:not-implemented exn:fail) ())
-
 (define-syntax-rule (todo)
-  (raise (make-exn:fail:not-implemented
-           (string-append
-             "Not implemented: "
-             (symbol->string (caar
-                               (continuation-mark-set->context
-                                 (current-continuation-marks)))))
-           (current-continuation-marks))))
+  (error
+    (caar (continuation-mark-set->context
+            (current-continuation-marks)))
+    "not implemented"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Representation and Definitions                                   ;;
+;; ==============================                                   ;;
+;;                                                                  ;;
+;; A λ-term is either a:                                            ;;
+;;                                                                  ;;
+;; - Variable (e.g., x): represented by a Racket symbol (e.g., 'x)  ;;
+;;                                                                  ;;
+;; - Abstraction (e.g., λx.y): represented by a 3-element list:     ;;
+;;                                                                  ;;
+;;      (abstraction var-name term)                                 ;;
+;;                                                                  ;;
+;;   - var-name must be a variable                                  ;;
+;;   - term may be any λ-term                                       ;;
+;;                                                                  ;;
+;; - or an Application (e.g., mn): represented by a 3-element list: ;;
+;;                                                                  ;;
+;;      (application m n)                                           ;;
+;;                                                                  ;;
+;;   where m and n are both λ-terms                                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Convert an input string in the lambda calculus to our internal
 ;; representation using lists. Note that either λ, #, or \ can be
@@ -83,27 +103,29 @@
                   "(~a)"))
               (deparse m) (deparse n))]))
 
-;; show-alpha-rename is the default printer for showing that an alpha
-;; rename has occured. Your code should *not* call this code directly,
-;; but instead use the notify-rename parameter, like this example:
+;; Suppose you α-rename a to b in the term '(abstraction a a). Then,
+;; your code should make this call to notify the grader that you have
+;; made an alpha rename:
 ;;
-;;  Suppose you alpha-rename a to b in the term '(abstraction a a). Then,
-;;  your code should make this call to notify the grader that you have
-;;  made an alpha rename:
+;;     ((notify-rename) 'a 'b '(abstraction a a))
+;;      ^               ^  ^  ^
+;;      |               |  |  `- Original term (before rename)
+;;      |               |  `---- New name
+;;      |               `------- Original name
+;;      `----------------------- notify-rename parameter
+;;                               (notify-rename) returns a function
 ;;
-;;      ((notify-rename) 'a 'b '(abstraction a a))
-;;
-;;  The notify-rename is in parenthesis there since it's a dynamically
-;;  bound variable. In Racket, this is implemented as a function which
-;;  returns that variable's value.
-(define (show-alpha-rename orig-var new-var term)
-  (printf "α ==> ~a for ~a in ~a~%" orig-var new-var (deparse term)))
-
-(define notify-rename (make-parameter show-alpha-rename))
+;; The notify-rename is in parenthesis there since it's a dynamically
+;; bound variable. In Racket, this is implemented as a function which
+;; returns that variable's value.
+(define notify-rename
+  (make-parameter
+    (λ (orig-var new-var term)
+      (printf "α ==> ~a for ~a in ~a~%" orig-var new-var (deparse term)))))
 
 ;; The helper below will help you generate generate a new variable which does
 ;; not cause a naming conflict with any of the conflicting terms. You'll want
-;; to used this when you need to alpha-rename a variable to find a new
+;; to use this when you need to alpha-rename a variable to find a new
 ;; variable name.
 ;;
 ;; Example: (new-variable '(a (abstraction a b) (abstraction c c)))
@@ -127,7 +149,7 @@
 ;;                    COMPLETE THE FUNCTIONS BELOW                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; The function contains-free-var? should return #t if the term contains the
+;; contains-free-var? should return #t if the term contains the
 ;; variable `var` as a free variable, or #f otherwise.
 ;;
 ;; Example: (contains-free-var? 'a '(abstraction a b))
@@ -146,6 +168,11 @@
 ;;    ==>   #t
 ;; Example: (contains-free-var? 'c '(application a (abstraction a c)))
 ;;    ==>   #t
+;; Example: (contains-free-var? 'x '(application (application x x) z)
+;;    ==>   #t
+;;
+;; Hint: pattern matching, anyone? Make sure to review quasiquoted
+;; patterns.
 (define (contains-free-var? var term)
   (todo))
 
@@ -166,16 +193,20 @@
 ;;
 ;; **Your code must not alpha-rename unless absolutely necessary!!**
 ;;
-;; Hint: you will need to use your contains-free-var? as one of the conditions
-;; to test if an alpha-rename is needed.
+;; Hint: you will need to use your contains-free-var? as one of the
+;; conditions to test if an alpha-rename is needed. Use the rules in
+;; the slides when to rename.
+;;
+;; Hint 2: Notice that you can use substitute-var to do the α-rename.
+;; No need to write a separate α-rename function.
 ;;
 ;; Example: (substitute-var 'x '(application x x) 'y)
 ;;    ==>   '(application y y)
 ;; Example: (substitute-var 'x '(abstraction z x) 'y)
 ;;    ==>   '(abstraction z y)
 ;;
-;; In this example, the inner x is bound by the abstaction, and should not be
-;; substituted for y.
+;; In this example, the inner x is bound by the abstaction, and should
+;; not be substituted for y.
 ;;
 ;; Example: (substitute-var 'x '(abstraction x x) 'y)
 ;;    ==>   '(abstraction x x)
@@ -224,8 +255,16 @@
 ;; Example: (single-reduction '(application (application a a) (application (application x x) a)))
 ;;    ==>   #f
 ;;
-;; Once again, you should make some of your own test cases here, and use the
-;; main function to test as well.
+;; Once again, you should make some of your own test cases here, and
+;; use the main function to test as well. Be sure to test cases that
+;; would produce an α-rename.
+;;
+;; Warning: suppose you are given a term like this:
+;;      (application m n)       where m and n are terms
+;; Do not call single-reduction on n until you know m does not
+;; produce a reduction. Not only is it inefficient, but it's also
+;; incorrect: this will result in reporting α-renames that did not
+;; happen (substitute-var is not side-effect free).
 (define (single-reduction term)
   (todo))
 
@@ -235,7 +274,7 @@
 (define (main-loop)
   (display "λ> ")
   (let ([user-input (read-line)])
-    (when (not (eq? user-input eof))
+    (unless (eq? user-input eof)
       (let ([parsed-input (with-handlers
                             ([exn:fail?
                                (λ (e)
@@ -243,13 +282,11 @@
                                  #f)])
                             (parse user-input))])
         (when parsed-input
-          (define (reduce term)
-            (let ([reduction (single-reduction term)])
-              (when reduction
-                (printf "β ==> ~a~%" (deparse reduction))
-                (reduce reduction))))
           (printf "INPUT ~a~%" (deparse parsed-input))
-          (reduce parsed-input)))
+          (let reduce ([reduction (single-reduction parsed-input)])
+            (when reduction
+              (printf "β ==> ~a~%" (deparse reduction))
+              (reduce (single-reduction reduction))))))
       (main-loop))))
 
 (module* main #f
