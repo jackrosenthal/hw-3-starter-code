@@ -7,9 +7,9 @@
 ;; you can remove once everything has been implemented, if you wish.
 (define-syntax-rule (todo)
   (error
-    (caar (continuation-mark-set->context
-            (current-continuation-marks)))
-    "not implemented"))
+   (caar (continuation-mark-set->context
+          (current-continuation-marks)))
+   "not implemented"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Representation and Definitions                                   ;;
@@ -44,14 +44,14 @@
 ;;               x
 ;;               (abstraction y x)))
 (define (parse input-string)
-  (define (variable? t)
+  (define (variable? term)
     (cond
-      [(member t '(lambda dot lparen rparen end)) #f]
-      [(symbol? t) #t]
+      [(memq term '(lambda dot lparen rparen end)) #f]
+      [(symbol? term) #t]
       [else #f]))
 
-  (define (term? t)
-    (or (variable? t) (list? t)))
+  (define (term? term)
+    (or (variable? term) (list? term)))
 
   (define (parse-iter parse-stack tokens)
     (define (shift-tok tok)
@@ -67,9 +67,9 @@
         (or #\) 'end))
        ;; Reduce by Abstraction -> λ Variable . Term
        (parse-iter (cons `(abstraction ,var ,term) stack) tokens)]
-      [((list (? term? t)) 'end)
+      [((list (? term? term)) 'end)
        ;; Done, valid parse
-       t]
+       term]
       [(_ 'end) (error "Incomplete parse")]
       [(_ (? char-whitespace?))
        ;; Ignore whitespace
@@ -81,7 +81,7 @@
       [(_ #\)) (shift-tok 'rparen)]
       [(_ chr) (shift-tok (string->symbol (string chr)))]))
 
-  (parse-iter '() (append (string->list input-string) '(end))))
+  (parse-iter '() `(,@(string->list input-string) end)))
 
 ;; Convert a list representation of a term to a string (the opposite
 ;; of the parse function)
@@ -90,18 +90,18 @@
 ;;    ==>   "λx.x"
 (define (deparse term)
   (match term
-    [(? symbol? var) (symbol->string var)]
+    [(?  symbol? var) (symbol->string var)]
     [`(abstraction ,var ,term)
-      (format "λ~a.~a" (deparse var) (deparse term))]
+     (format "λ~a.~a" (deparse var) (deparse term))]
     [`(application ,m ,n)
-      (format (string-append
-                (match m
-                  [`(abstraction ,_ ,_) "(~a)"]
-                  [_ "~a"])
-                (if (symbol? n)
+     (format (string-append
+              (match m
+                [`(abstraction ,_ ,_) "(~a)"]
+                [_ "~a"])
+              (if (symbol? n)
                   "~a"
                   "(~a)"))
-              (deparse m) (deparse n))]))
+             (deparse m) (deparse n))]))
 
 ;; Suppose you α-rename a to b in the term '(abstraction a a). Then,
 ;; your code should make this call to notify the grader that you have
@@ -120,8 +120,8 @@
 ;; returns that variable's value.
 (define notify-rename
   (make-parameter
-    (λ (orig-var new-var term)
-      (printf "α ==> ~a for ~a in ~a~%" orig-var new-var (deparse term)))))
+   (λ (orig-var new-var term)
+     (printf "α ==> ~a for ~a in ~a~%" orig-var new-var (deparse term)))))
 
 ;; The helper below will help you generate generate a new variable which does
 ;; not cause a naming conflict with any of the conflicting terms. You'll want
@@ -140,8 +140,8 @@
   (cond
     [(null? alphabet) (gensym "var-")]
     [(not (ormap
-            (λ (t) (contains-free-var? (car alphabet) t))
-            conflicting-terms))
+           (λ (t) (contains-free-var? (car alphabet) t))
+           conflicting-terms))
      (car alphabet)]
     [else (new-variable conflicting-terms (cdr alphabet))]))
 
@@ -277,9 +277,9 @@
     (unless (eq? user-input eof)
       (let ([parsed-input (with-handlers
                             ([exn:fail?
-                               (λ (e)
-                                 (eprintf "parse error: ~a~%" (exn-message e))
-                                 #f)])
+                              (λ (e)
+                                (eprintf "parse error: ~a~%" (exn-message e))
+                                #f)])
                             (parse user-input))])
         (when parsed-input
           (printf "INPUT ~a~%" (deparse parsed-input))
